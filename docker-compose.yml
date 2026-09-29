@@ -1,0 +1,47 @@
+services:
+
+  db:
+    image: postgres:15.2
+    container_name: flutter-shop-admin-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: flutter_shop_admin_bd
+    ports:
+      - "5433:5432"
+    volumes:
+      - flutter_shop_admin_data:/var/lib/postgresql/data
+      - ./database/flutter_shop_admin_bd.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d flutter_shop_admin_bd"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: raulesteveza/flutter-shop-admin-backend:latest
+    container_name: flutter-shop-admin-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      STAGE: prod
+      JWT_SECRET: FlutterShopAdminDemoSecret
+      DB_USERNAME: postgres
+      DB_PORT: 5432
+      DB_NAME: flutter_shop_admin_bd
+      DB_HOST: db
+      DB_PASSWORD: postgres
+      APP_VERSION: 1.0.0
+      PORT: 3000
+      HOST_API: http://localhost:3000/api
+    ports:
+      - "3000:3000"
+
+volumes:
+  flutter_shop_admin_data:
